@@ -12,9 +12,9 @@
         read-stream (LineNumberingPushbackReader.
                      (InputStreamReader. (.getInputStream socket)))
         write-stream (OutputStreamWriter. (.getOutputStream socket))]
-    [socket
-     (fn [bytes]
-       (binding [*out* write-stream]
-         (println bytes)
-         (flush)
-         (read read-stream)))]))
+    [socket (fn [bytes]
+              (binding [*in* read-stream
+                        *out* write-stream]
+                (println bytes)
+                (flush)
+                (read-line)))]))
