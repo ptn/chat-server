@@ -2,6 +2,14 @@
   (:require [clojure.test :refer :all]
             [chat.core :refer :all]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+(deftest test-parse-cmd
+  (is (= (parse-cmd "hi")
+         [cmd-send-msg "hi"]))
+  (is (= (parse-cmd "/hi")
+         [cmd-send-msg "/hi"]))
+  (is (= (parse-cmd "/login hi")
+         [cmd-login "hi"]))
+  ;; "/nope" is not a command, so send the full string to all connected
+  ;; users
+  (is (= (parse-cmd "/nope nope")
+         [cmd-send-msg "/nope nope"])))
