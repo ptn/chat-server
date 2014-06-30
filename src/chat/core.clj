@@ -8,10 +8,7 @@
 
 (def buf-size 8096)
 
-(defmulti select-handler
-  (fn [key] (.readyOps key)))
-
-(defmethod select-handler SelectionKey/OP_ACCEPT
+(defn accept-client
   [key]
   ;; (.channel key) is the server socket which listens for new
   ;; connections
@@ -39,20 +36,25 @@
   (.encode (Charset/defaultCharset) s))
 
 ;; for now assumes you get a full command in every read
-(defmethod select-handler SelectionKey/OP_READ
+(defn- read-client
   [key]
   (let [rbuf (-> (.attachment key) (:rbuf) (.clear))
         bytes-read (.read (.channel key) rbuf)]
     (if (= bytes-read -1)
       (close-conn key)
       (let [msg (decode-buf (.flip rbuf))
-            response (protocol/exec-cmd msg)
             wbuf (-> (.attachment key) (:wbuf) .clear)]
-        (.put wbuf (encode-to-buf response))
+        (.put wbuf (encode-to-buf msg))
         (.flip wbuf)
         (.write (.channel key) wbuf)))))
 
-;; stub
 (defn chat-server
   [port]
-  (select/server port))
+  (let [server (select/server port)]
+    (loop [clients {}]
+      (let [keys (select/select (:selector server))]
+        (doseq [k keys]
+          (cond
+           (= SelectionKey/OP_ACCEPT (.readyOps k)) (accept-client k)
+           (= SelectionKey/OP_READ   (.readyOps k)) (read-client k)))
+        (recur clients)))))
